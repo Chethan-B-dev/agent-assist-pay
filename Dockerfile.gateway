@@ -1,17 +1,22 @@
-# Build stage
-FROM maven:3.9.6-eclipse-temurin-21 AS build
-WORKDIR /app
-COPY pom.xml ./
-COPY common/pom.xml common/pom.xml
-COPY api-gateway/pom.xml api-gateway/pom.xml
-COPY common/src common/src
-COPY api-gateway/src api-gateway/src
-RUN mvn -q -e -DskipTests package -pl api-gateway -am
+# Simplified Dockerfile for api-gateway
+FROM eclipse-temurin:21-jre-jammy
 
-# Run stage
-FROM eclipse-temurin:21-jre
-VOLUME /tmp
 WORKDIR /app
-COPY --from=build /app/api-gateway/target/api-gateway-1.0.0.jar app.jar
+
+# Copy the pre-built jar
+COPY api-gateway/target/api-gateway-*.jar app.jar
+
+# Create non-root user
+RUN groupadd -r paynow && useradd -r -g paynow paynow
+RUN chown -R paynow:paynow /app
+USER paynow
+
+# Expose port
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=docker"]
