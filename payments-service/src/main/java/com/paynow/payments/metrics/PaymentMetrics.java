@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Custom metrics for payment processing
@@ -83,5 +85,22 @@ public class PaymentMetrics {
     public void recordLatency(Instant startTime) {
         Duration duration = Duration.between(startTime, Instant.now());
         requestLatencyTimer.record(duration);
+    }
+
+    public double getP95Latency() {
+        // Get a snapshot of the current timer statistics
+        return Arrays.stream(requestLatencyTimer.takeSnapshot()
+                // Get all percentile values as an array
+                .percentileValues())
+                // Convert the array to a stream for filtering
+                // Find the percentile that's approximately 0.95 (95%)
+                // We use Math.abs to find values within 0.001 of 0.95
+                .filter(v -> Math.abs(v.percentile() - 0.95) < 0.001)
+                // Take the first matching percentile
+                .findFirst()
+                // If we found a match, convert its value to milliseconds
+                .map(v -> v.value(TimeUnit.MILLISECONDS))
+                // If no 95th percentile was found, return 0.0 as a default
+                .orElse(0.0);
     }
 }
