@@ -19,6 +19,7 @@
         <module>accounts-service</module>
         <module>risk-service</module>
         <module>case-service</module>
+        <module>api-gateway</module>
     </modules>
 
     <properties>

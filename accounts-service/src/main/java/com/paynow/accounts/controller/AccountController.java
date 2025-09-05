@@ -32,34 +32,31 @@ public class AccountController {
 
     @GetMapping("/{customerId}/balance")
     public ResponseEntity<?> getBalance(@PathVariable String customerId, HttpServletRequest request) {
-        String requestId = CorrelationUtils.generateRequestId();
-        CorrelationUtils.setRequestId(requestId);
-        CorrelationUtils.setCustomerId(customerId);
+        String propagated = request.getHeader(CorrelationUtils.REQUEST_ID_HEADER);
+        String requestId = (propagated != null && !propagated.isBlank()) ? propagated : "req_missing";
 
         try {
             log.info("Getting balance for customer: {}", CorrelationUtils.redactCustomerId(customerId));
-            
+
             AccountBalanceResponse response = accountService.getBalance(customerId);
-            
+
             return ResponseEntity.ok()
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(response);
-                    
+
         } catch (PaymentException.AccountNotFoundException e) {
             log.warn("Account not found: {}", e.getMessage());
             PaymentError error = PaymentError.badRequest(e.getMessage(), requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
-                    
+
         } catch (Exception e) {
             log.error("Error getting balance: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to get balance", requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
-        } finally {
-            CorrelationUtils.clear();
         }
     }
 
@@ -69,35 +66,30 @@ public class AccountController {
             @RequestParam BigDecimal amount,
             @RequestParam String requestId,
             HttpServletRequest request) {
-        
-        CorrelationUtils.setRequestId(requestId);
-        CorrelationUtils.setCustomerId(customerId);
 
         try {
-            log.info("Reserving balance for customer: {}, amount: {}", 
+            log.info("Reserving balance for customer: {}, amount: {}",
                     CorrelationUtils.redactCustomerId(customerId), amount);
-            
+
             accountService.reserveBalance(customerId, amount, requestId);
-            
+
             return ResponseEntity.ok()
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body("{\"status\": \"reserved\"}");
-                    
+
         } catch (PaymentException e) {
             log.warn("Failed to reserve balance: {}", e.getMessage());
             PaymentError error = PaymentError.badRequest(e.getMessage(), requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
-                    
+
         } catch (Exception e) {
             log.error("Error reserving balance: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to reserve balance", requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
-        } finally {
-            CorrelationUtils.clear();
         }
     }
 

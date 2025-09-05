@@ -2,7 +2,6 @@ package com.paynow.payments.service;
 
 import com.paynow.common.dto.PaymentDecisionRequest;
 import com.paynow.common.dto.PaymentDecisionResponse;
-import com.paynow.common.exception.PaymentException;
 import com.paynow.common.service.IdempotencyService;
 import com.paynow.payments.agent.PaymentAgent;
 import com.paynow.payments.metrics.PaymentMetrics;
@@ -23,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
 public class PaymentDecisionService {
 
     private final IdempotencyService idempotencyService;
-    private final RateLimitingService rateLimitingService;
     private final PaymentAgent paymentAgent;
     private final PaymentMetrics paymentMetrics;
     private final EventPublishingService eventPublishingService;
@@ -39,17 +37,11 @@ public class PaymentDecisionService {
                             "in-progress",
                             PaymentDecisionResponse.class
                     );
+
             if (cachedResponse.isPresent()) {
                 log.info("Returning cached response for idempotencyKey: {}", request.getIdempotencyKey());
                 paymentMetrics.recordRequest("cached");
                 return cachedResponse.get();
-            }
-
-            // Apply rate limiting
-            if (!rateLimitingService.allowRequest(request.getCustomerId())) {
-                paymentMetrics.recordRequest("rate_limited");
-                throw new PaymentException.RateLimitException(
-                        "Rate limit exceeded for customer", requestId);
             }
 
             // Process payment using agent
@@ -72,7 +64,6 @@ public class PaymentDecisionService {
             });
 
             return response;
-
         } catch (Exception e) {
             paymentMetrics.recordRequest("error");
             throw e;

@@ -33,29 +33,26 @@ public class RiskController {
             @PathVariable String customerId,
             @RequestParam(required = false, defaultValue = "0") BigDecimal amount,
             HttpServletRequest request) {
-        
-        String requestId = CorrelationUtils.generateRequestId();
-        CorrelationUtils.setRequestId(requestId);
-        CorrelationUtils.setCustomerId(customerId);
+
+        String propagated = request.getHeader(CorrelationUtils.REQUEST_ID_HEADER);
+        String requestId = (propagated != null && !propagated.isBlank()) ? propagated : "req_missing";
 
         try {
-            log.info("Getting risk signals for customer: {}, amount: {}", 
+            log.info("Getting risk signals for customer: {}, amount: {}",
                     CorrelationUtils.redactCustomerId(customerId), amount);
-            
+
             RiskSignalsResponse response = riskService.getRiskSignals(customerId, amount);
-            
+
             return ResponseEntity.ok()
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(response);
-                    
+
         } catch (Exception e) {
             log.error("Error getting risk signals: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to get risk signals", requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
-        } finally {
-            CorrelationUtils.clear();
         }
     }
 

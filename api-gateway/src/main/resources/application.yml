@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cloud:
+    gateway:
+      routes:
+        - id: payments-decide
+          uri: http://payments-service:8080
+          predicates:
+            - Path=/payments/decide
+          filters:
+            - name: TokenBucketRateLimiter
+              args:
+                capacity: 5
+                refillRatePerSecond: 5
+                tokensPerRequest: 1
+                headerName: X-API-Key
+                keyPrefix: rate:token
+        - id: payments
+          uri: http://payments-service:8080
+          predicates:
+            - Path=/payments/**
+        - id: accounts
+          uri: http://accounts-service:8081
+          predicates:
+            - Path=/accounts/**
+        - id: risk
+          uri: http://risk-service:8082
+          predicates:
+            - Path=/risk/**
+        - id: case
+          uri: http://case-service:8083
+          predicates:
+            - Path=/case/**
+
+server:
+  port: ${PORT:8080}
+
+app:
+  api:
+    keys: ${API_KEYS:payment-api-key,internal-service-key}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.paynow: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO

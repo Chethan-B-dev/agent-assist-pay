@@ -31,29 +31,26 @@ public class CaseController {
     public ResponseEntity<?> createCase(
             @Valid @RequestBody CaseCreationRequest request,
             HttpServletRequest httpRequest) {
-        
-        String requestId = request.getRequestId();
-        CorrelationUtils.setRequestId(requestId);
-        CorrelationUtils.setCustomerId(request.getCustomerId());
+
+        String requestId = request.getRequestId() != null ? request.getRequestId()
+                : (httpRequest.getHeader(CorrelationUtils.REQUEST_ID_HEADER) != null ? httpRequest.getHeader(CorrelationUtils.REQUEST_ID_HEADER) : "req_missing");
 
         try {
-            log.info("Creating case for customer: {}, type: {}", 
+            log.info("Creating case for customer: {}, type: {}",
                     CorrelationUtils.redactCustomerId(request.getCustomerId()), request.getCaseType());
-            
+
             String caseId = caseService.createCase(request);
-            
+
             return ResponseEntity.ok()
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body("{\"caseId\": \"" + caseId + "\", \"status\": \"created\"}");
-                    
+
         } catch (Exception e) {
             log.error("Error creating case: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to create case", requestId, httpRequest.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
-        } finally {
-            CorrelationUtils.clear();
         }
     }
 
