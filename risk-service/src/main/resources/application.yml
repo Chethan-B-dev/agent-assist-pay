@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: risk-service
+
+server:
+  port: ${PORT:8082}
+
+# Application configuration
+app:
+  api:
+    keys: ${API_KEYS:internal-service-key,risk-api-key}
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    com.paynow: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+logging:
+  level:
+    com.paynow: INFO

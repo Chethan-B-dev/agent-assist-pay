@@ -1,0 +1,48 @@
+# Multi-stage build for case-service
+FROM openjdk:21-jdk-slim AS build
+
+WORKDIR /app
+
+# Copy Maven files
+COPY pom.xml .
+COPY common/pom.xml common/
+COPY case-service/pom.xml case-service/
+
+# Copy Maven wrapper
+COPY .mvn .mvn
+COPY mvnw .
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -DskipTests
+
+# Copy source code
+COPY common/src common/src
+COPY case-service/src case-service/src
+
+# Build the application
+RUN ./mvnw clean package -DskipTests
+
+FROM openjdk:21-jre-slim
+
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r paynow && useradd -r -g paynow paynow
+
+# Copy the built jar
+COPY --from=build /app/case-service/target/case-service-*.jar app.jar
+
+# Change ownership
+RUN chown -R paynow:paynow /app
+
+USER paynow
+
+# Expose port
+EXPOSE 8083
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8083/actuator/health || exit 1
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=docker"]

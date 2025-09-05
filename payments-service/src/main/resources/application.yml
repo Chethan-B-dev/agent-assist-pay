@@ -1,0 +1,95 @@
+spring:
+  application:
+    name: payments-service
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      jedis:
+        pool:
+          max-active: 10
+          max-idle: 5
+          min-idle: 1
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+server:
+  port: ${PORT:8080}
+  compression:
+    enabled: true
+
+# Service URLs
+services:
+  accounts:
+    url: ${ACCOUNTS_SERVICE_URL:http://localhost:8081}
+  risk:
+    url: ${RISK_SERVICE_URL:http://localhost:8082}
+  case:
+    url: ${CASE_SERVICE_URL:http://localhost:8083}
+
+# Application configuration
+app:
+  api:
+    keys: ${API_KEYS:payment-api-key,internal-service-key}
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging
+logging:
+  level:
+    com.paynow: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+    root: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{requestId:-}] %logger{36} - %msg%n"
+
+# Retry configuration
+spring.retry:
+  enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ""
+
+services:
+  accounts:
+    url: http://accounts-service:8081
+  risk:
+    url: http://risk-service:8082
+  case:
+    url: http://case-service:8083
+
+logging:
+  level:
+    com.paynow: INFO
