@@ -58,34 +58,34 @@ public class IdempotencyService {
 
             if (result instanceof Long && (Long)result == 0) {
                 // Key didn't exist and was set to in-progress
-                logger.debug("New request, marked as in-progress: {}", idempotencyKey);
+                log.debug("New request, marked as in-progress: {}", idempotencyKey);
                 return Optional.empty();
             } else if (result instanceof String) {
                 // Key existed, got cached value
                 String cachedJson = (String) result;
                 if (cachedJson.equals(inProgressMarker)) {
                     // Request is already being processed
-                    logger.debug("Concurrent request detected for key: {}", idempotencyKey);
+                    log.debug("Concurrent request detected for key: {}", idempotencyKey);
                     return Optional.empty();
                 }
 
                 try {
                     T cachedResponse = objectMapper.readValue(cachedJson, responseType);
-                    logger.debug("Found cached response for idempotencyKey: {}", idempotencyKey);
+                    log.debug("Found cached response for idempotencyKey: {}", idempotencyKey);
                     return Optional.of(cachedResponse);
                 } catch (JsonProcessingException e) {
-                    logger.error("Error deserializing cached response: {}", idempotencyKey, e);
+                    log.error("Error deserializing cached response: {}", idempotencyKey, e);
                     redisTemplate.delete(key);
                     return Optional.empty();
                 }
             }
 
             // Unexpected result type
-            logger.warn("Unexpected result from Redis script: {}", result);
+            log.warn("Unexpected result from Redis script: {}", result);
             return Optional.empty();
 
         } catch (Exception e) {
-            logger.warn("Error in idempotency check for key: {}", idempotencyKey, e);
+            log.warn("Error in idempotency check for key: {}", idempotencyKey, e);
             return Optional.empty();
         }
     }
@@ -99,13 +99,13 @@ public class IdempotencyService {
             String responseJson = objectMapper.writeValueAsString(response);
 
             redisTemplate.opsForValue().set(key, responseJson, IDEMPOTENCY_TTL);
-            logger.debug("Cached response for idempotencyKey: {}", idempotencyKey);
+            log.debug("Cached response for idempotencyKey: {}", idempotencyKey);
 
         } catch (JsonProcessingException e) {
-            logger.error("Error serializing response for caching: {}", idempotencyKey, e);
+            log.error("Error serializing response for caching: {}", idempotencyKey, e);
             throw new PaymentException("CACHING_ERROR", "Failed to cache response", e);
         } catch (Exception e) {
-            logger.warn("Error caching response for idempotencyKey: {}", idempotencyKey, e);
+            log.warn("Error caching response for idempotencyKey: {}", idempotencyKey, e);
         }
     }
 
@@ -116,9 +116,9 @@ public class IdempotencyService {
         try {
             String key = IDEMPOTENCY_PREFIX + idempotencyKey;
             redisTemplate.delete(key);
-            logger.debug("Removed idempotency key: {}", idempotencyKey);
+            log.debug("Removed idempotency key: {}", idempotencyKey);
         } catch (Exception e) {
-            logger.warn("Error removing idempotency key: {}", idempotencyKey, e);
+            log.warn("Error removing idempotency key: {}", idempotencyKey, e);
         }
     }
 }

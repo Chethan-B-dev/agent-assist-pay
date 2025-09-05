@@ -40,7 +40,7 @@ public class PaymentDecisionService {
                             PaymentDecisionResponse.class
                     );
             if (cachedResponse.isPresent()) {
-                logger.info("Returning cached response for idempotencyKey: {}", request.getIdempotencyKey());
+                log.info("Returning cached response for idempotencyKey: {}", request.getIdempotencyKey());
                 paymentMetrics.recordRequest("cached");
                 return cachedResponse.get();
             }
@@ -67,7 +67,7 @@ public class PaymentDecisionService {
                 try {
                     eventPublishingService.publishPaymentDecided(request, response);
                 } catch (Exception e) {
-                    logger.warn("Failed to publish payment.decided event: {}", e.getMessage(), e);
+                    log.warn("Failed to publish payment.decided event: {}", e.getMessage(), e);
                 }
             });
 

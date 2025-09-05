@@ -2,8 +2,7 @@ package com.paynow.payments.agent.tools;
 
 import com.paynow.common.dto.AccountBalanceResponse;
 import com.paynow.common.exception.PaymentException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -11,16 +10,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import java.time.Duration;
 import java.math.BigDecimal;
+import java.time.Duration;
 
 /**
  * Agent tool for interacting with accounts service
  */
 @Component
+@Slf4j
 public class AccountTool {
-
-    private static final Logger logger = LoggerFactory.getLogger(AccountTool.class);
 
     private final WebClient webClient;
     private final String accountsServiceUrl;
@@ -36,7 +34,7 @@ public class AccountTool {
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 200))
     public AccountBalanceResponse getBalance(String customerId) {
         try {
-            logger.debug("Calling accounts service for customer balance: {}", customerId);
+            log.debug("Calling accounts service for customer balance: {}", customerId);
             
             AccountBalanceResponse response = webClient
                     .get()
@@ -47,21 +45,21 @@ public class AccountTool {
                     .timeout(Duration.ofSeconds(5))
                     .block();
 
-            logger.debug("Balance retrieved successfully for customer: {}", customerId);
+            log.debug("Balance retrieved successfully for customer: {}", customerId);
             return response;
 
         } catch (WebClientResponseException.NotFound e) {
-            logger.warn("Account not found for customer: {}", customerId);
+            log.warn("Account not found for customer: {}", customerId);
             throw new PaymentException.AccountNotFoundException(
                     "Account not found for customer", null);
                     
         } catch (WebClientResponseException e) {
-            logger.error("Accounts service error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Accounts service error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new PaymentException("ACCOUNTS_SERVICE_ERROR", 
                     "Failed to retrieve account balance: " + e.getMessage(), e);
                     
         } catch (Exception e) {
-            logger.error("Unexpected error calling accounts service: {}", e.getMessage(), e);
+            log.error("Unexpected error calling accounts service: {}", e.getMessage(), e);
             throw new PaymentException("ACCOUNTS_SERVICE_ERROR", 
                     "Failed to retrieve account balance", e);
         }
@@ -70,7 +68,7 @@ public class AccountTool {
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 200))
     public void reserveBalance(String customerId, BigDecimal amount, String requestId) {
         try {
-            logger.debug("Reserving balance for customer: {}", customerId);
+            log.debug("Reserving balance for customer: {}", customerId);
             webClient
                 .post()
                 .uri(uriBuilder -> uriBuilder
@@ -88,13 +86,13 @@ public class AccountTool {
             if (body != null && body.contains("INSUFFICIENT_FUNDS")) {
                 throw new PaymentException.InsufficientFundsException("Insufficient funds during reservation", requestId);
             }
-            logger.error("Accounts service reserve error: {} - {}", e.getStatusCode(), body);
+            log.error("Accounts service reserve error: {} - {}", e.getStatusCode(), body);
             throw new PaymentException("ACCOUNTS_SERVICE_ERROR", "Failed to reserve balance: " + e.getMessage(), e);
         } catch (WebClientResponseException e) {
-            logger.error("Accounts service reserve error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            log.error("Accounts service reserve error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new PaymentException("ACCOUNTS_SERVICE_ERROR", "Failed to reserve balance: " + e.getMessage(), e);
         } catch (Exception e) {
-            logger.error("Unexpected error reserving balance: {}", e.getMessage(), e);
+            log.error("Unexpected error reserving balance: {}", e.getMessage(), e);
             throw new PaymentException("ACCOUNTS_SERVICE_ERROR", "Failed to reserve balance", e);
         }
     }

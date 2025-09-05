@@ -3,8 +3,8 @@ package com.paynow.cases.service;
 import com.paynow.cases.entity.PaymentCase;
 import com.paynow.cases.repository.CaseRepository;
 import com.paynow.common.dto.CaseCreationRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,22 +15,18 @@ import java.util.UUID;
  * Service for case management operations
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class CaseService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CaseService.class);
-
     private final CaseRepository caseRepository;
-
-    public CaseService(CaseRepository caseRepository) {
-        this.caseRepository = caseRepository;
-    }
 
     @Transactional
     public String createCase(CaseCreationRequest request) {
         // Check for duplicate case creation
         if (caseRepository.existsByRequestId(request.getRequestId())) {
             PaymentCase existingCase = caseRepository.findByRequestId(request.getRequestId()).orElseThrow();
-            logger.info("Case already exists for requestId: {}, returning existing caseId: {}", 
+            log.info("Case already exists for requestId: {}, returning existing caseId: {}", 
                     request.getRequestId(), existingCase.getCaseId());
             return existingCase.getCaseId();
         }
@@ -56,7 +52,7 @@ public class CaseService {
 
         caseRepository.save(paymentCase);
 
-        logger.info("Case created successfully: caseId={}, type={}, customer={}", 
+        log.info("Case created successfully: caseId={}, type={}, customer={}", 
                 caseId, request.getCaseType(), request.getCustomerId());
 
         return caseId;

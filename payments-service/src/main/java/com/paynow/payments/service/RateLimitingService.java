@@ -1,7 +1,6 @@
 package com.paynow.payments.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -13,10 +12,9 @@ import java.util.List;
  * Token bucket rate limiting service using Redis
  */
 @Service
+@Slf4j
 public class RateLimitingService {
 
-    private static final Logger logger = LoggerFactory.getLogger(RateLimitingService.class);
-    
     private static final String RATE_LIMIT_PREFIX = "rate_limit:";
     private static final int MAX_REQUESTS_PER_SECOND = 5;
     private static final int BUCKET_CAPACITY = 10; // Allow burst up to 10 requests
@@ -93,13 +91,13 @@ public class RateLimitingService {
             boolean allowed = result != null && result == 1L;
             
             if (!allowed) {
-                logger.info("Rate limit exceeded for customer: {}", customerId);
+                log.info("Rate limit exceeded for customer: {}", customerId);
             }
             
             return allowed;
 
         } catch (Exception e) {
-            logger.error("Error checking rate limit for customer: {}", customerId, e);
+            log.error("Error checking rate limit for customer: {}", customerId, e);
             // Fail open - allow request if rate limiting fails
             return true;
         }

@@ -5,11 +5,15 @@ import com.paynow.common.error.PaymentError;
 import com.paynow.common.util.CorrelationUtils;
 import com.paynow.risk.service.RiskService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 
@@ -18,15 +22,11 @@ import java.math.BigDecimal;
  */
 @RestController
 @RequestMapping("/risk")
+@RequiredArgsConstructor
+@Slf4j
 public class RiskController {
 
-    private static final Logger logger = LoggerFactory.getLogger(RiskController.class);
-
     private final RiskService riskService;
-
-    public RiskController(RiskService riskService) {
-        this.riskService = riskService;
-    }
 
     @GetMapping("/{customerId}/signals")
     public ResponseEntity<?> getRiskSignals(
@@ -39,7 +39,7 @@ public class RiskController {
         CorrelationUtils.setCustomerId(customerId);
 
         try {
-            logger.info("Getting risk signals for customer: {}, amount: {}", 
+            log.info("Getting risk signals for customer: {}, amount: {}", 
                     CorrelationUtils.redactCustomerId(customerId), amount);
             
             RiskSignalsResponse response = riskService.getRiskSignals(customerId, amount);
@@ -49,7 +49,7 @@ public class RiskController {
                     .body(response);
                     
         } catch (Exception e) {
-            logger.error("Error getting risk signals: {}", e.getMessage(), e);
+            log.error("Error getting risk signals: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to get risk signals", requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)

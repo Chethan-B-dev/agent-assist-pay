@@ -1,8 +1,7 @@
 package com.paynow.risk.service;
 
 import com.paynow.common.dto.RiskSignalsResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -15,16 +14,15 @@ import java.util.Random;
  * In production, this would integrate with real fraud detection systems
  */
 @Service
+@Slf4j
 public class RiskService {
-
-    private static final Logger logger = LoggerFactory.getLogger(RiskService.class);
     private static final Random random = new Random();
 
     private static final BigDecimal HIGH_AMOUNT_THRESHOLD = new BigDecimal("500.00");
     private static final BigDecimal VERY_HIGH_AMOUNT_THRESHOLD = new BigDecimal("1000.00");
 
     public RiskSignalsResponse getRiskSignals(String customerId, BigDecimal amount) {
-        logger.debug("Calculating risk signals for customer: {} with amount: {}", customerId, amount);
+        log.debug("Calculating risk signals for customer: {} with amount: {}", customerId, amount);
 
         List<RiskSignalsResponse.RiskFactor> riskFactors = new ArrayList<>();
         int baseRiskScore = calculateBaseRisk(customerId);
@@ -53,7 +51,7 @@ public class RiskService {
         RiskSignalsResponse response = new RiskSignalsResponse(
                 customerId, finalRiskScore, riskFactors, riskLevel);
 
-        logger.debug("Risk assessment completed: customer={}, riskScore={}, level={}", 
+        log.debug("Risk assessment completed: customer={}, riskScore={}, level={}", 
                 customerId, finalRiskScore, riskLevel);
 
         return response;

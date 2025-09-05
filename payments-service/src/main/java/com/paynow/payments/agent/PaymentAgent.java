@@ -1,12 +1,17 @@
 package com.paynow.payments.agent;
 
-import com.paynow.common.dto.*;
+import com.paynow.common.dto.AccountBalanceResponse;
+import com.paynow.common.dto.AgentTraceStep;
+import com.paynow.common.dto.CaseCreationRequest;
+import com.paynow.common.dto.PaymentDecisionRequest;
+import com.paynow.common.dto.PaymentDecisionResponse;
+import com.paynow.common.dto.RiskSignalsResponse;
 import com.paynow.common.exception.PaymentException;
 import com.paynow.payments.agent.tools.AccountTool;
 import com.paynow.payments.agent.tools.CaseTool;
 import com.paynow.payments.agent.tools.RiskTool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -20,9 +25,9 @@ import java.util.concurrent.CompletableFuture;
  * AI Agent orchestrator for payment decisions
  */
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class PaymentAgent {
-
-    private static final Logger logger = LoggerFactory.getLogger(PaymentAgent.class);
     
     private static final BigDecimal HIGH_AMOUNT_THRESHOLD = new BigDecimal("500.00");
     private static final BigDecimal VERY_HIGH_AMOUNT_THRESHOLD = new BigDecimal("1000.00");
@@ -30,12 +35,6 @@ public class PaymentAgent {
     private final AccountTool accountTool;
     private final RiskTool riskTool;
     private final CaseTool caseTool;
-
-    public PaymentAgent(AccountTool accountTool, RiskTool riskTool, CaseTool caseTool) {
-        this.accountTool = accountTool;
-        this.riskTool = riskTool;
-        this.caseTool = caseTool;
-    }
 
     @Retryable(value = {Exception.class}, maxAttempts = 2, backoff = @Backoff(delay = 500))
     public PaymentDecisionResponse processPayment(PaymentDecisionRequest request, String requestId) {
@@ -86,7 +85,7 @@ public class PaymentAgent {
             RiskSignalsResponse risk = riskFuture.get();
 
             long toolsCompletedTime = System.currentTimeMillis();
-            logger.info("Agent tools completed in {}ms", toolsCompletedTime - toolStartTime);
+            log.info("Agent tools completed in {}ms", toolsCompletedTime - toolStartTime);
 
             // Step 3: Decision logic
             PaymentDecisionResponse.DecisionType decision = makeDecision(
@@ -141,7 +140,7 @@ public class PaymentAgent {
             return new PaymentDecisionResponse(decision, reasons, agentTrace, requestId);
 
         } catch (Exception e) {
-            logger.error("Agent processing failed: {}", e.getMessage(), e);
+            log.error("Agent processing failed: {}", e.getMessage(), e);
             agentTrace.add(AgentTraceStep.error("Agent processing failed: " + e.getMessage()));
             
             // Return a safe decision on agent failure

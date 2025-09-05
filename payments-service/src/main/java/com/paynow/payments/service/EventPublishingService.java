@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paynow.common.dto.PaymentDecisionRequest;
 import com.paynow.common.dto.PaymentDecisionResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -17,17 +17,11 @@ import java.util.Map;
  * In production, this would integrate with Kafka, SQS, or other message queues
  */
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class EventPublishingService {
 
-    private static final Logger logger = LoggerFactory.getLogger(EventPublishingService.class);
-    private static final Logger eventLogger = LoggerFactory.getLogger("EVENTS");
-
     private final ObjectMapper objectMapper;
-
-    public EventPublishingService(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
     /**
      * Publish payment.decided event
      */
@@ -53,7 +47,7 @@ public class EventPublishingService {
             
             // Log event to dedicated event logger (could be configured to send to Kafka)
             String eventJson = objectMapper.writeValueAsString(event);
-            eventLogger.info("PAYMENT_DECIDED: {}", eventJson);
+            log.info("PAYMENT_DECIDED: {}", eventJson);
             
             // In production, you might also:
             // - Send to Kafka topic
@@ -61,13 +55,13 @@ public class EventPublishingService {
             // - Send to internal message bus
             // kafkaTemplate.send("payment.decided", eventJson);
             
-            logger.debug("Published payment.decided event for requestId: {}", response.getRequestId());
+            log.debug("Published payment.decided event for requestId: {}", response.getRequestId());
             
         } catch (JsonProcessingException e) {
-            logger.error("Error serializing payment.decided event for requestId: {}", 
+            log.error("Error serializing payment.decided event for requestId: {}", 
                     response.getRequestId(), e);
         } catch (Exception e) {
-            logger.error("Error publishing payment.decided event for requestId: {}", 
+            log.error("Error publishing payment.decided event for requestId: {}", 
                     response.getRequestId(), e);
         }
     }
@@ -92,12 +86,12 @@ public class EventPublishingService {
             event.put("payload", payload);
             
             String eventJson = objectMapper.writeValueAsString(event);
-            eventLogger.info("BALANCE_RESERVED: {}", eventJson);
+            log.info("BALANCE_RESERVED: {}", eventJson);
             
-            logger.debug("Published balance.reserved event for requestId: {}", requestId);
+            log.debug("Published balance.reserved event for requestId: {}", requestId);
             
         } catch (Exception e) {
-            logger.error("Error publishing balance.reserved event for requestId: {}", requestId, e);
+            log.error("Error publishing balance.reserved event for requestId: {}", requestId, e);
         }
     }
 }

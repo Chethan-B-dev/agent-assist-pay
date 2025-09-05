@@ -5,6 +5,7 @@ import com.paynow.common.error.PaymentError;
 import com.paynow.common.util.CorrelationUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,13 +15,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider;
-import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 
 import java.io.IOException;
 import java.util.Set;
@@ -30,9 +29,8 @@ import java.util.Set;
  */
 @Configuration
 @EnableWebSecurity
+@Slf4j
 public class SecurityConfig {
-
-    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
     
     @Value("${app.api.keys:payment-api-key,internal-service-key}")
     private Set<String> validApiKeys;
@@ -100,10 +98,10 @@ public class SecurityConfig {
         protected Object getPreAuthenticatedPrincipal(HttpServletRequest request) {
             String apiKey = request.getHeader(API_KEY_HEADER);
             if (apiKey != null && validApiKeys.contains(apiKey)) {
-                logger.debug("Valid API key provided");
+                log.debug("Valid API key provided");
                 return apiKey;
             }
-            logger.debug("Invalid or missing API key");
+            log.debug("Invalid or missing API key");
             return null;
         }
 
@@ -126,7 +124,7 @@ public class SecurityConfig {
                            AuthenticationException authException) throws IOException {
             
             String requestId = CorrelationUtils.generateRequestId();
-            logger.warn("Authentication failed for request: {} - {}", request.getRequestURI(), authException.getMessage());
+            log.warn("Authentication failed for request: {} - {}", request.getRequestURI(), authException.getMessage());
 
             PaymentError error = PaymentError.unauthorized(
                     "Invalid or missing API key", requestId, request.getRequestURI());

@@ -7,8 +7,7 @@ import com.paynow.common.exception.PaymentException;
 import com.paynow.common.util.CorrelationUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,9 +25,9 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/accounts")
 @RequiredArgsConstructor
+@Slf4j
 public class AccountController {
 
-    private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
     private final AccountService accountService;
 
     @GetMapping("/{customerId}/balance")
@@ -38,7 +37,7 @@ public class AccountController {
         CorrelationUtils.setCustomerId(customerId);
 
         try {
-            logger.info("Getting balance for customer: {}", CorrelationUtils.redactCustomerId(customerId));
+            log.info("Getting balance for customer: {}", CorrelationUtils.redactCustomerId(customerId));
             
             AccountBalanceResponse response = accountService.getBalance(customerId);
             
@@ -47,14 +46,14 @@ public class AccountController {
                     .body(response);
                     
         } catch (PaymentException.AccountNotFoundException e) {
-            logger.warn("Account not found: {}", e.getMessage());
+            log.warn("Account not found: {}", e.getMessage());
             PaymentError error = PaymentError.badRequest(e.getMessage(), requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
                     
         } catch (Exception e) {
-            logger.error("Error getting balance: {}", e.getMessage(), e);
+            log.error("Error getting balance: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to get balance", requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
@@ -75,7 +74,7 @@ public class AccountController {
         CorrelationUtils.setCustomerId(customerId);
 
         try {
-            logger.info("Reserving balance for customer: {}, amount: {}", 
+            log.info("Reserving balance for customer: {}, amount: {}", 
                     CorrelationUtils.redactCustomerId(customerId), amount);
             
             accountService.reserveBalance(customerId, amount, requestId);
@@ -85,14 +84,14 @@ public class AccountController {
                     .body("{\"status\": \"reserved\"}");
                     
         } catch (PaymentException e) {
-            logger.warn("Failed to reserve balance: {}", e.getMessage());
+            log.warn("Failed to reserve balance: {}", e.getMessage());
             PaymentError error = PaymentError.badRequest(e.getMessage(), requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)
                     .body(error);
                     
         } catch (Exception e) {
-            logger.error("Error reserving balance: {}", e.getMessage(), e);
+            log.error("Error reserving balance: {}", e.getMessage(), e);
             PaymentError error = PaymentError.internalError("Failed to reserve balance", requestId, request.getRequestURI());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .header(CorrelationUtils.REQUEST_ID_HEADER, requestId)

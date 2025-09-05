@@ -6,8 +6,8 @@ import com.paynow.accounts.repository.AccountRepository;
 import com.paynow.accounts.repository.BalanceReservationRepository;
 import com.paynow.common.dto.AccountBalanceResponse;
 import com.paynow.common.exception.PaymentException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,18 +18,12 @@ import java.time.LocalDateTime;
  * Service for account operations with transactional safety
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class AccountService {
-
-    private static final Logger logger = LoggerFactory.getLogger(AccountService.class);
 
     private final AccountRepository accountRepository;
     private final BalanceReservationRepository reservationRepository;
-
-    public AccountService(AccountRepository accountRepository, 
-                         BalanceReservationRepository reservationRepository) {
-        this.accountRepository = accountRepository;
-        this.reservationRepository = reservationRepository;
-    }
 
     public AccountBalanceResponse getBalance(String customerId) {
         Account account = accountRepository.findByCustomerId(customerId)
@@ -59,7 +53,7 @@ public class AccountService {
     public void reserveBalance(String customerId, BigDecimal amount, String requestId) {
         // Check for duplicate reservation request
         if (reservationRepository.existsByRequestId(requestId)) {
-            logger.warn("Duplicate reservation request: {}", requestId);
+            log.warn("Duplicate reservation request: {}", requestId);
             return; // Idempotent - already processed
         }
 
@@ -99,7 +93,7 @@ public class AccountService {
 
         reservationRepository.save(reservation);
 
-        logger.info("Balance reserved: customer={}, amount={}, requestId={}", 
+        log.info("Balance reserved: customer={}, amount={}, requestId={}", 
                 customerId, amount, requestId);
     }
 
@@ -127,7 +121,7 @@ public class AccountService {
         reservation.setCommittedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
 
-        logger.info("Reservation committed: requestId={}, amount={}", requestId, reservation.getAmount());
+        log.info("Reservation committed: requestId={}, amount={}", requestId, reservation.getAmount());
     }
 
     @Transactional  
@@ -137,7 +131,7 @@ public class AccountService {
                         "Reservation not found: " + requestId, requestId));
 
         if (reservation.getStatus() != BalanceReservation.ReservationStatus.PENDING) {
-            logger.warn("Attempting to release non-pending reservation: {}", requestId);
+            log.warn("Attempting to release non-pending reservation: {}", requestId);
             return;
         }
 
@@ -145,6 +139,6 @@ public class AccountService {
         reservation.setCommittedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
 
-        logger.info("Reservation released: requestId={}, amount={}", requestId, reservation.getAmount());
+        log.info("Reservation released: requestId={}, amount={}", requestId, reservation.getAmount());
     }
 }
