@@ -3,8 +3,8 @@ package com.paynow.gateway.filters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paynow.common.error.PaymentError;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -36,12 +36,14 @@ import java.util.regex.Pattern;
  * Keyed by customerId extracted from path or request body.
  */
 @Component("TokenBucketRateLimiter")
-@RequiredArgsConstructor
 @Slf4j
 public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayFilterFactory<TokenBucketRateLimiterGatewayFilterFactory.Config> implements Ordered {
 
-    private final ReactiveStringRedisTemplate redisTemplate;
-    private final DefaultRedisScript<List> redisScript;
+    @Autowired
+    private ReactiveStringRedisTemplate redisTemplate;
+
+    @Autowired
+    private DefaultRedisScript<List> redisScript;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Pattern to extract customerId from URL paths like /accounts/{customerId}/...
@@ -49,8 +51,6 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
 
     public TokenBucketRateLimiterGatewayFilterFactory() {
         super(Config.class);
-        this.redisTemplate = null; // for framework
-        this.redisScript = null; // for framework
     }
 
     @Override
@@ -59,22 +59,61 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
             // First try to extract customerId from the path
             String customerId = extractCustomerIdFromPath(exchange.getRequest());
 
-            // If not found in path and it's a POST to /payments/decide, try to extract from body
-            if (customerId == null &&
-                    exchange.getRequest().getPath().value().equals("/payments/decide") &&
-                    exchange.getRequest().getMethod().name().equals("POST")) {
-
-                return extractCustomerIdFromBody(exchange)
-                        .flatMap(id -> applyRateLimit(id, exchange, chain, config))
-                        .switchIfEmpty(chain.filter(exchange)); // If can't extract, just proceed
-            }
-
-            // If we have a customerId from the path, apply rate limiting
+            // If found in path, apply rate limiting
             if (customerId != null) {
                 return applyRateLimit(customerId, exchange, chain, config);
             }
 
-            // If we can't determine customerId, just proceed with the request
+            // If it's a POST to /payments/decide, try to extract from body
+            if (exchange.getRequest().getPath().value().equals("/payments/decide") &&
+                    exchange.getRequest().getMethod().name().equals("POST")) {
+
+                // Use DataBufferUtils.join() to avoid multiple subscriptions
+                return DataBufferUtils.join(exchange.getRequest().getBody())
+                        .flatMap(dataBuffer -> {
+                            try {
+                                // Read the buffer content
+                                byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                                dataBuffer.read(bytes);
+
+                                // Create a cached copy for downstream consumers
+                                DataBuffer cachedBuffer = exchange.getResponse().bufferFactory().wrap(bytes);
+
+                                // Create a decorated request with the cached body
+                                ServerHttpRequestDecorator decoratedRequest = new ServerHttpRequestDecorator(exchange.getRequest()) {
+                                    @Override
+                                    public Flux<DataBuffer> getBody() {
+                                        return Flux.just(cachedBuffer);
+                                    }
+                                };
+
+                                // Create a new exchange with the decorated request
+                                ServerWebExchange mutatedExchange = exchange.mutate()
+                                        .request(decoratedRequest)
+                                        .build();
+
+                                // Try to extract customerId from the body
+                                try {
+                                    Map<String, Object> requestBody = objectMapper.readValue(bytes, Map.class);
+                                    if (requestBody.containsKey("customerId")) {
+                                        String id = requestBody.get("customerId").toString();
+                                        return applyRateLimit(id, mutatedExchange, chain, config);
+                                    }
+                                } catch (Exception e) {
+                                    log.warn("Failed to parse request body for customerId: {}", e.getMessage());
+                                }
+
+                                // If we can't extract customerId, proceed with the mutated exchange
+                                return chain.filter(mutatedExchange);
+
+                            } finally {
+                                // Make sure to release the data buffer to avoid memory leaks
+                                DataBufferUtils.release(dataBuffer);
+                            }
+                        });
+            }
+
+            // For all other cases, just proceed with the request
             return chain.filter(exchange);
         };
     }
@@ -86,39 +125,6 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
             return matcher.group(1);
         }
         return null;
-    }
-
-    private Mono<String> extractCustomerIdFromBody(ServerWebExchange exchange) {
-        return DataBufferUtils.join(exchange.getRequest().getBody())
-                .flatMap(dataBuffer -> {
-                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                    dataBuffer.read(bytes);
-                    DataBufferUtils.release(dataBuffer);
-
-                    // Create a new buffer with the same bytes for downstream consumers
-                    DataBuffer cachedDataBuffer = exchange.getResponse().bufferFactory().wrap(bytes);
-
-                    // Replace the request body with a cached version for downstream filters
-                    ServerHttpRequest mutatedRequest = new ServerHttpRequestDecorator(exchange.getRequest()) {
-                        @Override
-                        public Flux<DataBuffer> getBody() {
-                            return Flux.just(cachedDataBuffer);
-                        }
-                    };
-                    exchange.mutate().request(mutatedRequest).build();
-
-                    try {
-                        // Parse the JSON to extract customerId
-                        Map<String, Object> requestBody = objectMapper.readValue(bytes, Map.class);
-                        if (requestBody.containsKey("customerId")) {
-                            return Mono.just(requestBody.get("customerId").toString());
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed to parse request body for customerId: {}", e.getMessage());
-                    }
-
-                    return Mono.empty();
-                });
     }
 
     private Mono<Void> applyRateLimit(String customerId, ServerWebExchange exchange, GatewayFilterChain chain, Config config) {

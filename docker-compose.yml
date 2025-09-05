@@ -65,6 +65,7 @@ services:
     container_name: paynow-accounts-service
     ports:
       - "8081:8081"
+      - "8087:8087"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     healthcheck:
@@ -124,11 +125,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   api-gateway:
     build:
@@ -136,7 +132,7 @@ services:
       dockerfile: Dockerfile.gateway
     container_name: paynow-api-gateway
     ports:
-      - "8080:8080"
+      - "8089:8089"
     environment:
       - REDIS_HOST=redis
       - SPRING_PROFILES_ACTIVE=docker

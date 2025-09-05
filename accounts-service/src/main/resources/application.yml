@@ -12,6 +12,9 @@ spring:
     console:
       enabled: true
       path: /h2-console
+      settings:
+        web-allow-others: true  # Allow remote access
+        web-port: 8087  # Set custom port for H2 console
       
   jpa:
     defer-datasource-initialization: true

@@ -5,23 +5,30 @@ Production-grade Spring Boot multi-module payment system with agentic AI assista
 ## Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Payments      │    │    Accounts      │    │      Risk       │
-│   Service       │◄──►│    Service       │    │    Service      │
-│   (Port 8080)   │    │   (Port 8081)    │    │  (Port 8082)    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                       │
-         │              ┌─────────────────┐               │
-         └──────────────►│      Case       │◄──────────────┘
-                        │    Service      │
-                        │  (Port 8083)    │
-                        └─────────────────┘
+                        ┌─────────────────┐
+                        │   API Gateway   │
+                        │   (Port 8089)   │
+                        └────────┬────────┘
                                  │
-              ┌─────────────────────────────────┐
-              │           Redis            │    ELK Stack
-              │     (Rate Limiting +       │  (Elasticsearch +
-              │     Idempotency Cache)     │   Logstash + Kibana)
-              └─────────────────────────────────┘
+         ┌─────────────┬─────────┴────────┬─────────────┐
+         │             │                  │             │
+┌─────────────────┐    │    ┌──────────────────┐    ┌─────────────────┐
+│   Payments      │    │    │    Accounts      │    │      Risk       │
+│   Service       │◄───┼───►│    Service       │    │    Service      │
+│   (Port 8080)   │    │    │   (Port 8081)    │    │  (Port 8082)    │
+└─────────────────┘    │    └──────────────────┘    └─────────────────┘
+│             │              │                       │
+│             │    ┌─────────────────┐               │
+└─────────────┼───►│      Case       │◄──────────────┘
+│    │    Service      │
+│    │  (Port 8083)    │
+│    └─────────────────┘
+│             │
+┌────────┴────────────────────────┐
+│           Redis                 │    ELK Stack
+│     (Rate Limiting +            │  (Elasticsearch +
+│     Idempotency Cache)          │   Logstash + Kibana)
+└─────────────────────────────────┘
 ```
 
 ## Quick Start
@@ -57,6 +64,7 @@ Production-grade Spring Boot multi-module payment system with agentic AI assista
 
 ## Services
 
+- **API Gateway**: Centralized entry point for all services with security and rate limiting
 - **Payments Service**: Main API with agent orchestration
 - **Accounts Service**: H2 database for balance management
 - **Risk Service**: Stubbed risk assessment logic
@@ -67,11 +75,14 @@ Production-grade Spring Boot multi-module payment system with agentic AI assista
 - **Latency**: Parallel tool execution, Redis caching, connection pooling
 - **Security**: Defense-in-depth, PII redaction, API key auth
 - **Observability**: Request correlation IDs, structured logging, metrics
+- **Concurrency**: Serializable transaction isolation, pessimistic locking for critical operations
 
 ## Trade-offs
 
 - **Redis vs In-Memory**: Chose Redis for scalability over simplicity
 - **H2 vs PostgreSQL**: H2 for easy setup, would use PostgreSQL in production
 - **Sync vs Async**: Synchronous for consistency, async event publishing
+- **Token Bucket vs Fixed Window**: Chose token bucket for better handling of burst traffic
+- **Gateway vs Direct Access**: Added gateway for centralized security at the cost of additional network hop
 
 Access Kibana at http://localhost:5601 for log analysis.
