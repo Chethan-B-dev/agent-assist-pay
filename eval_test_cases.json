@@ -1,0 +1,90 @@
+[
+  {
+    "id": "test_case_1",
+    "description": "Standard transaction with sufficient balance, should be allowed",
+    "request": {
+      "customerId": "c_123",
+      "amount": 100.00,
+      "currency": "USD",
+      "payeeId": "m_amazon",
+      "idempotencyKey": "idem_test1",
+      "paymentMethod": "card",
+      "cardLast4": "1234",
+      "ipAddress": "192.168.1.1",
+      "deviceId": "device_123"
+    },
+    "expectedDecision": "ALLOW",
+    "reason": "Low risk transaction with sufficient balance"
+  },
+  {
+    "id": "test_case_2",
+    "description": "High amount transaction that should trigger review",
+    "request": {
+      "customerId": "c_456",
+      "amount": 450.00,
+      "currency": "USD",
+      "payeeId": "m_electronics",
+      "idempotencyKey": "idem_test2",
+      "paymentMethod": "card",
+      "cardLast4": "5678",
+      "ipAddress": "192.168.1.2",
+      "deviceId": "device_456"
+    },
+    "expectedDecision": "REVIEW",
+    "reason": "High amount transaction close to balance limit"
+  },
+  {
+    "id": "test_case_3",
+    "description": "Suspended account, should be blocked",
+    "request": {
+      "customerId": "c_suspended",
+      "amount": 25.00,
+      "currency": "USD",
+      "payeeId": "m_grocery",
+      "idempotencyKey": "idem_test3",
+      "paymentMethod": "card",
+      "cardLast4": "9012",
+      "ipAddress": "192.168.1.3",
+      "deviceId": "device_789"
+    },
+    "expectedDecision": "BLOCK",
+    "reason": "Account is not active"
+  },
+  {
+    "id": "test_case_4",
+    "description": "Insufficient funds, should be blocked",
+    "request": {
+      "customerId": "c_low_balance",
+      "amount": 50.00,
+      "currency": "USD",
+      "payeeId": "m_retail",
+      "idempotencyKey": "idem_test4",
+      "paymentMethod": "card",
+      "cardLast4": "3456",
+      "ipAddress": "192.168.1.4",
+      "deviceId": "device_101"
+    },
+    "expectedDecision": "BLOCK",
+    "reason": "Insufficient funds"
+  },
+  {
+    "id": "test_case_5",
+    "description": "Very high amount with risk factors, should be blocked",
+    "request": {
+      "customerId": "c_123_risk",
+      "amount": 1200.00,
+      "currency": "USD",
+      "payeeId": "m_travel",
+      "idempotencyKey": "idem_test5",
+      "paymentMethod": "card",
+      "cardLast4": "7890",
+      "ipAddress": "203.0.113.1",
+      "deviceId": "device_new",
+      "metadata": {
+        "location": "unusual"
+      }
+    },
+    "expectedDecision": "BLOCK",
+    "reason": "Very high amount transaction with high risk factors"
+  }
+]
