@@ -12,8 +12,6 @@ import java.util.Optional;
 @Repository
 public interface CaseRepository extends JpaRepository<PaymentCase, Long> {
 
-    Optional<PaymentCase> findByCaseId(String caseId);
-
     Optional<PaymentCase> findByRequestId(String requestId);
 
     boolean existsByRequestId(String requestId);

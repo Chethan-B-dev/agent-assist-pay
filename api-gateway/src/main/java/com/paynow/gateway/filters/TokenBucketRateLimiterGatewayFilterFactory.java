@@ -224,7 +224,7 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
 
     @Data
     public static class Config {
-        private double capacity = 10; // bucket size
+        private double capacity = 5; // bucket size
         private double refillRatePerSecond = 5; // tokens per second (5 req/sec per customer)
         private double tokensPerRequest = 1; // tokens consumed per request
         private String keyPrefix = "rate:customer"; // Changed from rate:token to rate:customer

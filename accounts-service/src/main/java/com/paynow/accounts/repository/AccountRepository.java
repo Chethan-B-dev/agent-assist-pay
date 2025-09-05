@@ -24,6 +24,4 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.customerId = :customerId")
     Optional<Account> findByCustomerIdForUpdate(@Param("customerId") String customerId);
-
-    boolean existsByCustomerId(String customerId);
 }
