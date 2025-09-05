@@ -9,6 +9,7 @@ import com.paynow.common.exception.PaymentException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -49,7 +50,7 @@ public class AccountService {
         );
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void reserveBalance(String customerId, BigDecimal amount, String requestId) {
         // Check for duplicate reservation request
         if (reservationRepository.existsByRequestId(requestId)) {
@@ -97,7 +98,7 @@ public class AccountService {
                 customerId, amount, requestId);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void commitReservation(String requestId) {
         BalanceReservation reservation = reservationRepository.findByRequestId(requestId)
                 .orElseThrow(() -> new PaymentException("RESERVATION_NOT_FOUND", 
@@ -124,7 +125,7 @@ public class AccountService {
         log.info("Reservation committed: requestId={}, amount={}", requestId, reservation.getAmount());
     }
 
-    @Transactional  
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void releaseReservation(String requestId) {
         BalanceReservation reservation = reservationRepository.findByRequestId(requestId)
                 .orElseThrow(() -> new PaymentException("RESERVATION_NOT_FOUND", 
