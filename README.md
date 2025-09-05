@@ -41,7 +41,7 @@ Production-grade Spring Boot multi-module payment system with agentic AI assista
 
 2. **Test the API:**
    ```bash
-   curl -X POST http://localhost:8080/payments/decide \
+   curl -X POST http://localhost:8089/payments/decide \
      -H "Content-Type: application/json" \
      -H "X-API-Key: payment-api-key" \
      -d '{
