@@ -1,40 +1,14 @@
-# Multi-stage build for risk-service
-FROM openjdk:21-jdk-slim AS build
+# Simplified Dockerfile for risk-service
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-# Copy Maven files
-COPY pom.xml .
-COPY common/pom.xml common/
-COPY risk-service/pom.xml risk-service/
-
-# Copy Maven wrapper
-COPY .mvn .mvn
-COPY mvnw .
-
-# Download dependencies
-RUN ./mvnw dependency:go-offline -DskipTests
-
-# Copy source code
-COPY common/src common/src
-COPY risk-service/src risk-service/src
-
-# Build the application
-RUN ./mvnw clean package -DskipTests
-
-FROM openjdk:21-jre-slim
-
-WORKDIR /app
+# Copy the pre-built jar
+COPY risk-service/target/risk-service-*.jar app.jar
 
 # Create non-root user
 RUN groupadd -r paynow && useradd -r -g paynow paynow
-
-# Copy the built jar
-COPY --from=build /app/risk-service/target/risk-service-*.jar app.jar
-
-# Change ownership
 RUN chown -R paynow:paynow /app
-
 USER paynow
 
 # Expose port

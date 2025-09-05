@@ -1,40 +1,14 @@
-# Multi-stage build for payments-service
-FROM openjdk:21-jdk-slim AS build
+# Simplified Dockerfile for payments-service
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-# Copy Maven wrapper and pom files
-COPY pom.xml .
-COPY common/pom.xml common/
-COPY payments-service/pom.xml payments-service/
-
-# Copy Maven wrapper
-COPY .mvn .mvn
-COPY mvnw .
-
-# Download dependencies
-RUN ./mvnw dependency:go-offline -DskipTests
-
-# Copy source code
-COPY common/src common/src
-COPY payments-service/src payments-service/src
-
-# Build the application
-RUN ./mvnw clean package -DskipTests
-
-FROM openjdk:21-jre-slim
-
-WORKDIR /app
+# Copy the pre-built jar
+COPY payments-service/target/payments-service-*.jar app.jar
 
 # Create non-root user
 RUN groupadd -r paynow && useradd -r -g paynow paynow
-
-# Copy the built jar
-COPY --from=build /app/payments-service/target/payments-service-*.jar app.jar
-
-# Change ownership
 RUN chown -R paynow:paynow /app
-
 USER paynow
 
 # Expose port
