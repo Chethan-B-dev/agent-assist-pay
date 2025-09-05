@@ -1,23 +1,26 @@
 package com.paynow.payments.service;
 
-import com.paynow.common.dto.*;
+import com.paynow.common.dto.PaymentDecisionRequest;
+import com.paynow.common.dto.PaymentDecisionResponse;
 import com.paynow.common.exception.PaymentException;
+import com.paynow.common.service.IdempotencyService;
 import com.paynow.payments.agent.PaymentAgent;
 import com.paynow.payments.metrics.PaymentMetrics;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Main service for processing payment decisions using agent orchestration
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class PaymentDecisionService {
-
-    private static final Logger logger = LoggerFactory.getLogger(PaymentDecisionService.class);
 
     private final IdempotencyService idempotencyService;
     private final RateLimitingService rateLimitingService;
@@ -25,28 +28,21 @@ public class PaymentDecisionService {
     private final PaymentMetrics paymentMetrics;
     private final EventPublishingService eventPublishingService;
 
-    public PaymentDecisionService(IdempotencyService idempotencyService,
-                                RateLimitingService rateLimitingService,
-                                PaymentAgent paymentAgent,
-                                PaymentMetrics paymentMetrics,
-                                EventPublishingService eventPublishingService) {
-        this.idempotencyService = idempotencyService;
-        this.rateLimitingService = rateLimitingService;
-        this.paymentAgent = paymentAgent;
-        this.paymentMetrics = paymentMetrics;
-        this.eventPublishingService = eventPublishingService;
-    }
-
     public PaymentDecisionResponse processPayment(PaymentDecisionRequest request, String requestId) {
         Instant startTime = Instant.now();
         
         try {
             // Check idempotency first
-            PaymentDecisionResponse cachedResponse = idempotencyService.getCachedResponse(request.getIdempotencyKey());
-            if (cachedResponse != null) {
+            Optional<PaymentDecisionResponse> cachedResponse =
+                    idempotencyService.checkAndMarkInProgress(
+                            request.getIdempotencyKey(),
+                            "in-progress",
+                            PaymentDecisionResponse.class
+                    );
+            if (cachedResponse.isPresent()) {
                 logger.info("Returning cached response for idempotencyKey: {}", request.getIdempotencyKey());
                 paymentMetrics.recordRequest("cached");
-                return cachedResponse;
+                return cachedResponse.get();
             }
 
             // Apply rate limiting

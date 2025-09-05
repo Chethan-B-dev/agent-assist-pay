@@ -6,11 +6,17 @@ import com.paynow.common.error.PaymentError;
 import com.paynow.common.exception.PaymentException;
 import com.paynow.common.util.CorrelationUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 
@@ -19,15 +25,11 @@ import java.math.BigDecimal;
  */
 @RestController
 @RequestMapping("/accounts")
+@RequiredArgsConstructor
 public class AccountController {
 
     private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
-
     private final AccountService accountService;
-
-    public AccountController(AccountService accountService) {
-        this.accountService = accountService;
-    }
 
     @GetMapping("/{customerId}/balance")
     public ResponseEntity<?> getBalance(@PathVariable String customerId, HttpServletRequest request) {
