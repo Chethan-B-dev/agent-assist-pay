@@ -120,6 +120,8 @@ services:
         condition: service_healthy
       case-service:
         condition: service_healthy
+    ports:
+      - "8080:8080"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s

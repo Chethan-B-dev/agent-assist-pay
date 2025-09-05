@@ -31,7 +31,7 @@ public class AccountTool {
         this.accountsServiceUrl = accountsServiceUrl;
     }
 
-    @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 200))
+    @Retryable(value = {Exception.class}, maxAttempts = 2, backoff = @Backoff(delay = 200))
     public AccountBalanceResponse getBalance(String customerId) {
         try {
             log.debug("Calling accounts service for customer balance: {}", customerId);

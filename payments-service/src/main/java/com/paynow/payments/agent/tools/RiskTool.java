@@ -31,7 +31,7 @@ public class RiskTool {
         this.riskServiceUrl = riskServiceUrl;
     }
 
-    @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 200))
+    @Retryable(value = {Exception.class}, maxAttempts = 2, backoff = @Backoff(delay = 200))
     public RiskSignalsResponse getRiskSignals(String customerId, BigDecimal amount) {
         try {
             log.debug("Calling risk service for customer: {} with amount: {}", customerId, amount);

@@ -59,6 +59,13 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
             // First try to extract customerId from the path
             String customerId = extractCustomerIdFromPath(exchange.getRequest());
 
+            if (customerId == null) {
+                customerId = extractCustomerIdFromQueryParams(exchange.getRequest());
+                if (customerId != null) {
+                    log.info("fetched customerid {} from query parameters", customerId);
+                }
+            }
+
             // If found in path, apply rate limiting
             if (customerId != null) {
                 return applyRateLimit(customerId, exchange, chain, config);
@@ -97,6 +104,7 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
                                     Map<String, Object> requestBody = objectMapper.readValue(bytes, Map.class);
                                     if (requestBody.containsKey("customerId")) {
                                         String id = requestBody.get("customerId").toString();
+                                        log.info("fetched customerid {} from post request body", id);
                                         return applyRateLimit(id, mutatedExchange, chain, config);
                                     }
                                 } catch (Exception e) {
@@ -116,6 +124,15 @@ public class TokenBucketRateLimiterGatewayFilterFactory extends AbstractGatewayF
             // For all other cases, just proceed with the request
             return chain.filter(exchange);
         };
+    }
+
+    private String extractCustomerIdFromQueryParams(ServerHttpRequest request) {
+        // Get the query parameters
+        String queryParam = request.getQueryParams().getFirst("customerId");
+        if (queryParam != null && !queryParam.isEmpty()) {
+            return queryParam;
+        }
+        return null;
     }
 
     private String extractCustomerIdFromPath(ServerHttpRequest request) {

@@ -21,7 +21,7 @@
                 <pattern>
                     <pattern>
                         {
-                        "service": "payments-service",
+                        "service": "api-gateway",
                         "version": "1.0.0"
                         }
                     </pattern>
@@ -30,10 +30,13 @@
         </encoder>
     </appender>
 
-    <!-- Logger levels -->
-    <logger name="com.paynow" level="DEBUG"/>
-    <logger name="org.springframework.security" level="INFO"/>
+    <!-- Set specific logger levels -->
+    <logger name="com.paynow.gateway" level="DEBUG"/>
+    <logger name="com.paynow.gateway.filters" level="DEBUG"/>
+    <logger name="org.springframework.cloud.gateway" level="DEBUG"/>
     <logger name="org.springframework.web" level="INFO"/>
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.springframework.data.redis" level="DEBUG"/>
 
     <!-- Root logger configuration -->
     <root level="INFO">
